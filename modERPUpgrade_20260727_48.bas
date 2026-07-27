@@ -31,11 +31,14 @@ Option Compare Database
 ' Date     : 27-Jul-2026
 '=============================================================================
 
-Private Const UPGRADE_CODE  As String = "2026.07.27.48"
-Private Const UPGRADE_NAME  As String = "Completed QC tab buttons with MIR-style design and navigation links"
-Private Const QC_MENU_FORM  As String = "frmQCLeftMenu"
-Private Const MIR_FORM      As String = "frmMIRRegister"
-Private Const REF_BUTTON    As String = "btnMIR"          ' Style source in frmQCLeftMenu
+Private Const UPGRADE_CODE      As String  = "2026.07.27.48"
+Private Const UPGRADE_NAME      As String  = "Completed QC tab buttons with MIR-style design and navigation links"
+Private Const QC_MENU_FORM      As String  = "frmQCLeftMenu"
+Private Const MIR_FORM          As String  = "frmMIRRegister"
+Private Const REF_BUTTON        As String  = "btnMIR"        ' Style source in frmQCLeftMenu
+Private Const STANDARD_FONT     As String  = "Segoe UI"      ' ERP-standard font for all stub forms
+Private Const FORM_DEFAULT_WIDTH As Long   = 9500            ' 9500 twips = 9500/1440 ≈ 6.6 inches
+Private Const VBE_MAX_COLUMN    As Long    = 9999            ' Sentinel: search to end-of-line in CodeModule.Find
 
 ' ─── Entry points ────────────────────────────────────────────────────────────
 
@@ -135,7 +138,7 @@ Private Sub CreateStubForm48(ByVal formName As String, ByVal formTitle As String
     frm.NavigationButtons = False
     frm.DividingLines = False
     frm.BorderStyle = 1                  ' Thin
-    frm.Width       = 9500               ' 9500 twips = 9500/1440 ≈ 6.6 inches
+    frm.Width       = FORM_DEFAULT_WIDTH
 
     ' ---- Header section ----
     frm.Section(acHeader).Visible = True
@@ -144,7 +147,7 @@ Private Sub CreateStubForm48(ByVal formName As String, ByVal formTitle As String
     Set ctl = CreateControl(frm.Name, acLabel, acHeader, , , 120, 80, 9260, 440)
     ctl.Name      = "lblFormTitle"
     ctl.Caption   = formTitle
-    ctl.FontName  = "Segoe UI"
+    ctl.FontName  = STANDARD_FONT
     ctl.FontSize  = 14
     ctl.FontBold  = True
     ctl.ForeColor = RGB(31, 73, 125)     ' ERP dark blue
@@ -157,7 +160,7 @@ Private Sub CreateStubForm48(ByVal formName As String, ByVal formTitle As String
     Set ctl = CreateControl(frm.Name, acLabel, acDetail, , , 500, 1400, 8500, 520)
     ctl.Name      = "lblUnderConstruction"
     ctl.Caption   = "This module is currently under development. It will be available in a future upgrade."
-    ctl.FontName  = "Segoe UI"
+    ctl.FontName  = STANDARD_FONT
     ctl.FontSize  = 11
     ctl.ForeColor = RGB(128, 128, 128)
     ctl.BackStyle = 0
@@ -337,7 +340,7 @@ Private Sub InjectOpenFormHandler48(ByVal codemod As Object, _
 
     Dim startLine As Long, startCol As Long, endLine As Long, endCol As Long
     startLine = 1 : startCol = 1
-    endLine = codemod.CountOfLines : endCol = 9999
+    endLine = codemod.CountOfLines : endCol = VBE_MAX_COLUMN
 
     If codemod.Find(subName, startLine, startCol, endLine, endCol) Then
         Exit Sub   ' Already present – do not duplicate
