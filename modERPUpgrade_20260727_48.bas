@@ -135,7 +135,7 @@ Private Sub CreateStubForm48(ByVal formName As String, ByVal formTitle As String
     frm.NavigationButtons = False
     frm.DividingLines = False
     frm.BorderStyle = 1                  ' Thin
-    frm.Width       = 9500               ' ~6.6 inches (twips)
+    frm.Width       = 9500               ' 9500 twips = 9500/1440 ≈ 6.6 inches
 
     ' ---- Header section ----
     frm.Section(acHeader).Visible = True
@@ -270,13 +270,27 @@ Private Sub InjectQCClickHandlers48()
 
     Const COMPONENT_NAME As String = "Form_frmQCLeftMenu"
 
+    On Error GoTo VBEAccessDenied
+
+    '-- Locate the VBProject for the current database rather than assuming index 1,
+    '   which may not be correct when add-ins or multiple databases are loaded.
     Dim vbProj   As Object   ' VBIDE.VBProject
     Dim vbComp   As Object   ' VBIDE.VBComponent
     Dim codemod  As Object   ' VBIDE.CodeModule
+    Dim prj      As Object
 
-    On Error GoTo VBEAccessDenied
+    For Each prj In Application.VBE.VBProjects
+        If LCase(prj.Filename) = LCase(CurrentProject.FullName) Then
+            Set vbProj = prj
+            Exit For
+        End If
+    Next prj
 
-    Set vbProj  = Application.VBE.VBProjects(1)
+    If vbProj Is Nothing Then
+        Err.Raise vbObjectError + 1002, "InjectQCClickHandlers48", _
+                  "Could not locate the VBProject for the current database."
+    End If
+
     Set vbComp  = vbProj.VBComponents(COMPONENT_NAME)
     Set codemod = vbComp.CodeModule
 
@@ -331,7 +345,7 @@ Private Sub InjectOpenFormHandler48(ByVal codemod As Object, _
 
     Dim code As String
     code = "Private Sub " & subName & "()" & vbCrLf & _
-           "    If Application.CurrentProject.AllForms(""" & targetForm & """).IsLoaded Then" & vbCrLf & _
+           "    If (SysCmd(acSysCmdGetObjectState, acForm, """ & targetForm & """) And acObjStateOpen) <> 0 Then" & vbCrLf & _
            "        DoCmd.SelectObject acForm, """ & targetForm & """" & vbCrLf & _
            "    Else" & vbCrLf & _
            "        DoCmd.OpenForm """ & targetForm & """" & vbCrLf & _
@@ -350,7 +364,7 @@ Private Function BuildManualHandlerList48() As String
 
     Dim tpl As String
     tpl = "Private Sub {SUB}()" & nl & _
-          "    If Application.CurrentProject.AllForms(""{FORM}"").IsLoaded Then" & nl & _
+          "    If (SysCmd(acSysCmdGetObjectState, acForm, ""{FORM}"") And acObjStateOpen) <> 0 Then" & nl & _
           "        DoCmd.SelectObject acForm, ""{FORM}""" & nl & _
           "    Else" & nl & _
           "        DoCmd.OpenForm ""{FORM}""" & nl & _
