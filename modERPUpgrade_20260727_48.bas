@@ -31,14 +31,21 @@ Option Compare Database
 ' Date     : 27-Jul-2026
 '=============================================================================
 
-Private Const UPGRADE_CODE      As String  = "2026.07.27.48"
-Private Const UPGRADE_NAME      As String  = "Completed QC tab buttons with MIR-style design and navigation links"
-Private Const QC_MENU_FORM      As String  = "frmQCLeftMenu"
-Private Const MIR_FORM          As String  = "frmMIRRegister"
-Private Const REF_BUTTON        As String  = "btnMIR"        ' Style source in frmQCLeftMenu
-Private Const STANDARD_FONT     As String  = "Segoe UI"      ' ERP-standard font for all stub forms
-Private Const FORM_DEFAULT_WIDTH As Long   = 9500            ' 9500 twips = 9500/1440 ≈ 6.6 inches
-Private Const VBE_MAX_COLUMN    As Long    = 9999            ' Sentinel: search to end-of-line in CodeModule.Find
+Private Const UPGRADE_CODE       As String  = "2026.07.27.48"
+Private Const UPGRADE_NAME       As String  = "Completed QC tab buttons with MIR-style design and navigation links"
+Private Const QC_MENU_FORM       As String  = "frmQCLeftMenu"
+Private Const MIR_FORM           As String  = "frmMIRRegister"
+Private Const REF_BUTTON         As String  = "btnMIR"          ' Style source in frmQCLeftMenu
+Private Const STANDARD_FONT      As String  = "Segoe UI"        ' ERP-standard font for all stub forms
+Private Const FORM_DEFAULT_WIDTH As Long    = 9500              ' 9500 twips = 9500/1440 ≈ 6.6 inches
+Private Const VBE_MAX_COLUMN     As Long    = 9999              ' Sentinel: search to end-of-line in CodeModule.Find
+
+' Placeholder form names – used by CreateQCPlaceholderForms48 and RollbackUpgrade_20260727_48
+Private Const FORM_QC_DASHBOARD  As String  = "frmQCDashboard"
+Private Const FORM_ITP_REGISTER  As String  = "frmITPRegister"
+Private Const FORM_NCR_REGISTER  As String  = "frmNCRRegister"
+Private Const FORM_TEST_REPORTS  As String  = "frmTestReports"
+Private Const FORM_QC_REPORTS    As String  = "frmQCReports"
 
 ' ─── Entry points ────────────────────────────────────────────────────────────
 
@@ -90,11 +97,11 @@ Public Sub RollbackUpgrade_20260727_48()
     ' because the visual improvements are always desirable.
     On Error Resume Next
     Dim frms(4) As String
-    frms(0) = "frmQCDashboard"
-    frms(1) = "frmITPRegister"
-    frms(2) = "frmNCRRegister"
-    frms(3) = "frmTestReports"
-    frms(4) = "frmQCReports"
+    frms(0) = FORM_QC_DASHBOARD
+    frms(1) = FORM_ITP_REGISTER
+    frms(2) = FORM_NCR_REGISTER
+    frms(3) = FORM_TEST_REPORTS
+    frms(4) = FORM_QC_REPORTS
 
     Dim i As Integer
     For i = 0 To 4
@@ -114,11 +121,11 @@ Private Sub CreateQCPlaceholderForms48()
     ' Creates a clean, consistently-styled stub form for each QC feature
     ' that does not yet have a full register form.
 
-    CreateStubForm48 "frmQCDashboard",  "QC Dashboard"
-    CreateStubForm48 "frmITPRegister",  "Inspection & Test Plan Register"
-    CreateStubForm48 "frmNCRRegister",  "Non-Conformance Report Register"
-    CreateStubForm48 "frmTestReports",  "Test Reports"
-    CreateStubForm48 "frmQCReports",    "QC Reports"
+    CreateStubForm48 FORM_QC_DASHBOARD, "QC Dashboard"
+    CreateStubForm48 FORM_ITP_REGISTER, "Inspection & Test Plan Register"
+    CreateStubForm48 FORM_NCR_REGISTER, "Non-Conformance Report Register"
+    CreateStubForm48 FORM_TEST_REPORTS, "Test Reports"
+    CreateStubForm48 FORM_QC_REPORTS,   "QC Reports"
 End Sub
 
 Private Sub CreateStubForm48(ByVal formName As String, ByVal formTitle As String)
@@ -176,7 +183,31 @@ End Sub
 
 ' ─── Step 2 – Style and wire QC navigation buttons ───────────────────────────
 
-Private Sub StyleAndLinkQCButtons48()
+Private Sub LoadQCButtonConfig48(ByRef ctlNames() As String, _
+                                  ByRef caps() As String, _
+                                  ByRef targetForms() As String, _
+                                  ByRef subNames() As String)
+    ' Single source of truth for the 7 QC navigation buttons.
+    ' Used by StyleAndLinkQCButtons48, InjectQCClickHandlers48, and
+    ' BuildManualHandlerList48 to eliminate data duplication.
+    ReDim ctlNames(6)    : ReDim caps(6)
+    ReDim targetForms(6) : ReDim subNames(6)
+
+    ctlNames(0) = "btnQCDashboard" : caps(0) = "QC Dashboard"                : targetForms(0) = FORM_QC_DASHBOARD
+    ctlNames(1) = "btnITPRegister" : caps(1) = "ITP Register"                : targetForms(1) = FORM_ITP_REGISTER
+    ctlNames(2) = "btnMIR"         : caps(2) = "Material Inspection Request" : targetForms(2) = MIR_FORM
+    ctlNames(3) = "btnWIR"         : caps(3) = "Work Inspection Request"     : targetForms(3) = "frmWIR"
+    ctlNames(4) = "btnNCR"         : caps(4) = "Non-Conformance Report"      : targetForms(4) = FORM_NCR_REGISTER
+    ctlNames(5) = "btnTestReports" : caps(5) = "Test Reports"                : targetForms(5) = FORM_TEST_REPORTS
+    ctlNames(6) = "btnQCReports"   : caps(6) = "QC Reports"                  : targetForms(6) = FORM_QC_REPORTS
+
+    Dim i As Integer
+    For i = 0 To 6
+        subNames(i) = ctlNames(i) & "_Click"
+    Next i
+End Sub
+
+
     '-- Open the QC left-menu form in Design view so we can read/write properties
     DoCmd.OpenForm QC_MENU_FORM, acDesign
 
@@ -193,26 +224,17 @@ Private Sub StyleAndLinkQCButtons48()
     Dim refBtn As CommandButton
     Set refBtn = qcFrm.Controls(REF_BUTTON)
 
-    '-- Table of all 7 QC navigation buttons [control name, caption, target form]
-    Dim btnCount As Integer
-    btnCount = 7
-
-    Dim names(6)   As String
-    Dim caps(6)    As String
-    Dim targets(6) As String
-
-    names(0) = "btnQCDashboard" : caps(0) = "QC Dashboard"                : targets(0) = "frmQCDashboard"
-    names(1) = "btnITPRegister" : caps(1) = "ITP Register"                : targets(1) = "frmITPRegister"
-    names(2) = "btnMIR"         : caps(2) = "Material Inspection Request" : targets(2) = MIR_FORM
-    names(3) = "btnWIR"         : caps(3) = "Work Inspection Request"     : targets(3) = "frmWIR"
-    names(4) = "btnNCR"         : caps(4) = "Non-Conformance Report"      : targets(4) = "frmNCRRegister"
-    names(5) = "btnTestReports" : caps(5) = "Test Reports"                : targets(5) = "frmTestReports"
-    names(6) = "btnQCReports"   : caps(6) = "QC Reports"                  : targets(6) = "frmQCReports"
+    '-- Load the single-source button configuration table
+    Dim names()   As String
+    Dim caps()    As String
+    Dim targets() As String
+    Dim subNames() As String
+    LoadQCButtonConfig48 names, caps, targets, subNames
 
     Dim i As Integer
 
     '-- Apply style and caption to every QC navigation button
-    For i = 0 To btnCount - 1
+    For i = 0 To UBound(names)
         If ControlExists48(qcFrm, names(i)) Then
             ApplyQCButtonStyle48 qcFrm, names(i), refBtn, caps(i), targets(i)
         End If
@@ -255,8 +277,10 @@ Private Sub ApplyQCButtonStyle48(ByVal frm As Form, _
     btn.TextAlign       = refBtn.TextAlign
 
     '-- Caption: set only when the button is unnamed / empty
-    If Trim(btn.Caption) = "" _
-    Or LCase(Trim(btn.Caption)) = LCase(btnName) Then
+    Dim captionTrimmed As String
+    captionTrimmed = Trim(btn.Caption)
+    If captionTrimmed = "" _
+    Or LCase(captionTrimmed) = LCase(btnName) Then
         btn.Caption = caption
     End If
 
@@ -297,21 +321,13 @@ Private Sub InjectQCClickHandlers48()
     Set vbComp  = vbProj.VBComponents(COMPONENT_NAME)
     Set codemod = vbComp.CodeModule
 
-    '-- All 7 click-handler Subs to inject  [sub name, target form name]
-    Dim subNames(6)   As String
-    Dim formNames(6)  As String
-
-    subNames(0) = "btnQCDashboard_Click" : formNames(0) = "frmQCDashboard"
-    subNames(1) = "btnITPRegister_Click" : formNames(1) = "frmITPRegister"
-    subNames(2) = "btnMIR_Click"         : formNames(2) = MIR_FORM
-    subNames(3) = "btnWIR_Click"         : formNames(3) = "frmWIR"
-    subNames(4) = "btnNCR_Click"         : formNames(4) = "frmNCRRegister"
-    subNames(5) = "btnTestReports_Click" : formNames(5) = "frmTestReports"
-    subNames(6) = "btnQCReports_Click"   : formNames(6) = "frmQCReports"
+    '-- Load the single-source button configuration table
+    Dim ctlNames() As String, caps() As String, targetForms() As String, subNames() As String
+    LoadQCButtonConfig48 ctlNames, caps, targetForms, subNames
 
     Dim i As Integer
-    For i = 0 To 6
-        InjectOpenFormHandler48 codemod, subNames(i), formNames(i)
+    For i = 0 To UBound(subNames)
+        InjectOpenFormHandler48 codemod, subNames(i), targetForms(i)
     Next i
 
     Exit Sub
@@ -377,23 +393,16 @@ Private Function BuildManualHandlerList48() As String
     Dim nl As String
     nl = vbCrLf
 
-    Dim subs(6)  As String
-    Dim forms(6) As String
-    subs(0) = "btnQCDashboard_Click" : forms(0) = "frmQCDashboard"
-    subs(1) = "btnITPRegister_Click" : forms(1) = "frmITPRegister"
-    subs(2) = "btnMIR_Click"         : forms(2) = MIR_FORM
-    subs(3) = "btnWIR_Click"         : forms(3) = "frmWIR"
-    subs(4) = "btnNCR_Click"         : forms(4) = "frmNCRRegister"
-    subs(5) = "btnTestReports_Click" : forms(5) = "frmTestReports"
-    subs(6) = "btnQCReports_Click"   : forms(6) = "frmQCReports"
+    Dim ctlNames() As String, caps() As String, targetForms() As String, subNames() As String
+    LoadQCButtonConfig48 ctlNames, caps, targetForms, subNames
 
     Dim i As Integer
-    For i = 0 To 6
+    For i = 0 To UBound(subNames)
         If i = 0 Then
-            BuildManualHandlerList48 = BuildOpenFormHandlerCode48(subs(i), forms(i))
+            BuildManualHandlerList48 = BuildOpenFormHandlerCode48(subNames(i), targetForms(i))
         Else
             BuildManualHandlerList48 = BuildManualHandlerList48 & nl & nl & _
-                                       BuildOpenFormHandlerCode48(subs(i), forms(i))
+                                       BuildOpenFormHandlerCode48(subNames(i), targetForms(i))
         End If
     Next i
 End Function
