@@ -156,8 +156,7 @@ Private Sub CreateStubForm48(ByVal formName As String, ByVal formTitle As String
 
     Set ctl = CreateControl(frm.Name, acLabel, acDetail, , , 500, 1400, 8500, 520)
     ctl.Name      = "lblUnderConstruction"
-    ctl.Caption   = "This module is currently under development." & _
-                    "  It will be available in a future upgrade."
+    ctl.Caption   = "This module is currently under development. It will be available in a future upgrade."
     ctl.FontName  = "Segoe UI"
     ctl.FontSize  = 11
     ctl.ForeColor = RGB(128, 128, 128)
@@ -365,31 +364,37 @@ End Sub
 
 Private Function BuildManualHandlerList48() As String
     ' Returns a readable list of handler stubs for the manual-step message.
+    ' These stubs match the exact logic injected by InjectOpenFormHandler48
+    ' (focus-switch if already open, otherwise open fresh).
     Dim nl As String
     nl = vbCrLf
 
-    BuildManualHandlerList48 = _
-        "Private Sub btnQCDashboard_Click()" & nl & _
-        "    DoCmd.OpenForm ""frmQCDashboard""" & nl & _
-        "End Sub" & nl & nl & _
-        "Private Sub btnITPRegister_Click()" & nl & _
-        "    DoCmd.OpenForm ""frmITPRegister""" & nl & _
-        "End Sub" & nl & nl & _
-        "Private Sub btnMIR_Click()" & nl & _
-        "    DoCmd.OpenForm """ & MIR_FORM & """" & nl & _
-        "End Sub" & nl & nl & _
-        "Private Sub btnWIR_Click()" & nl & _
-        "    DoCmd.OpenForm ""frmWIR""" & nl & _
-        "End Sub" & nl & nl & _
-        "Private Sub btnNCR_Click()" & nl & _
-        "    DoCmd.OpenForm ""frmNCRRegister""" & nl & _
-        "End Sub" & nl & nl & _
-        "Private Sub btnTestReports_Click()" & nl & _
-        "    DoCmd.OpenForm ""frmTestReports""" & nl & _
-        "End Sub" & nl & nl & _
-        "Private Sub btnQCReports_Click()" & nl & _
-        "    DoCmd.OpenForm ""frmQCReports""" & nl & _
-        "End Sub"
+    Dim tpl As String
+    tpl = "Private Sub {SUB}()" & nl & _
+          "    If Application.CurrentProject.AllForms(""{FORM}"").IsLoaded Then" & nl & _
+          "        DoCmd.SelectObject acForm, ""{FORM}""" & nl & _
+          "    Else" & nl & _
+          "        DoCmd.OpenForm ""{FORM}""" & nl & _
+          "    End If" & nl & _
+          "End Sub"
+
+    Dim handlers(6) As String
+    handlers(0) = Replace(Replace(tpl, "{SUB}", "btnQCDashboard_Click"), "{FORM}", "frmQCDashboard")
+    handlers(1) = Replace(Replace(tpl, "{SUB}", "btnITPRegister_Click"), "{FORM}", "frmITPRegister")
+    handlers(2) = Replace(Replace(tpl, "{SUB}", "btnMIR_Click"),         "{FORM}", MIR_FORM)
+    handlers(3) = Replace(Replace(tpl, "{SUB}", "btnWIR_Click"),         "{FORM}", "frmWIR")
+    handlers(4) = Replace(Replace(tpl, "{SUB}", "btnNCR_Click"),         "{FORM}", "frmNCRRegister")
+    handlers(5) = Replace(Replace(tpl, "{SUB}", "btnTestReports_Click"), "{FORM}", "frmTestReports")
+    handlers(6) = Replace(Replace(tpl, "{SUB}", "btnQCReports_Click"),   "{FORM}", "frmQCReports")
+
+    Dim i As Integer
+    For i = 0 To 6
+        If i = 0 Then
+            BuildManualHandlerList48 = handlers(i)
+        Else
+            BuildManualHandlerList48 = BuildManualHandlerList48 & nl & nl & handlers(i)
+        End If
+    Next i
 End Function
 
 ' ─── Step 3 – Record upgrade ─────────────────────────────────────────────────
@@ -410,10 +415,13 @@ End Sub
 ' ─── Helpers ─────────────────────────────────────────────────────────────────
 
 Private Function UpgradeAlreadyApplied48(ByVal upgradeCode As String) As Boolean
+    ' Uses Replace to guard against single-quote injection in the version string.
+    Dim safecode As String
+    safecode = Replace(upgradeCode, "'", "''")
     Dim rs As DAO.Recordset
     Set rs = CurrentDb.OpenRecordset( _
         "SELECT COUNT(*) AS n FROM tblERPUpgradeHistory " & _
-        "WHERE UpgradeVersion='" & upgradeCode & "'", _
+        "WHERE UpgradeVersion='" & safecode & "'", _
         dbOpenSnapshot)
     UpgradeAlreadyApplied48 = (rs!n > 0)
     rs.Close
