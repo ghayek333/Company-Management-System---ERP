@@ -135,7 +135,7 @@ Private Sub CreateStubForm48(ByVal formName As String, ByVal formTitle As String
     frm.NavigationButtons = False
     frm.DividingLines = False
     frm.BorderStyle = 1                  ' Thin
-    frm.Width       = 9500               ' ~6.6 in  (twips)
+    frm.Width       = 9500               ' ~6.6 inches (twips)
 
     ' ---- Header section ----
     frm.Section(acHeader).Visible = True
@@ -190,42 +190,28 @@ Private Sub StyleAndLinkQCButtons48()
     Dim refBtn As CommandButton
     Set refBtn = qcFrm.Controls(REF_BUTTON)
 
-    '-- Table of [control name, caption, target form]
+    '-- Table of all 7 QC navigation buttons [control name, caption, target form]
     Dim btnCount As Integer
-    btnCount = 6
+    btnCount = 7
 
-    Dim names(5)   As String
-    Dim caps(5)    As String
-    Dim targets(5) As String
+    Dim names(6)   As String
+    Dim caps(6)    As String
+    Dim targets(6) As String
 
-    names(0) = "btnQCDashboard" : caps(0) = "QC Dashboard"                   : targets(0) = "frmQCDashboard"
-    names(1) = "btnITPRegister" : caps(1) = "ITP Register"                   : targets(1) = "frmITPRegister"
-    names(2) = "btnMIR"         : caps(2) = "Material Inspection Request"    : targets(2) = MIR_FORM
-    names(3) = "btnWIR"         : caps(3) = "Work Inspection Request"        : targets(3) = "frmWIR"
-    names(4) = "btnNCR"         : caps(4) = "Non-Conformance Report"         : targets(4) = "frmNCRRegister"
-    names(5) = "btnTestReports" : caps(5) = "Test Reports"                   : targets(5) = "frmTestReports"
-
-    '  btnQCReports handled separately (different position in the array vs the binary)
-    Dim extraNames(0)   As String
-    Dim extraCaps(0)    As String
-    Dim extraTargets(0) As String
-    extraNames(0)   = "btnQCReports"
-    extraCaps(0)    = "QC Reports"
-    extraTargets(0) = "frmQCReports"
+    names(0) = "btnQCDashboard" : caps(0) = "QC Dashboard"                : targets(0) = "frmQCDashboard"
+    names(1) = "btnITPRegister" : caps(1) = "ITP Register"                : targets(1) = "frmITPRegister"
+    names(2) = "btnMIR"         : caps(2) = "Material Inspection Request" : targets(2) = MIR_FORM
+    names(3) = "btnWIR"         : caps(3) = "Work Inspection Request"     : targets(3) = "frmWIR"
+    names(4) = "btnNCR"         : caps(4) = "Non-Conformance Report"      : targets(4) = "frmNCRRegister"
+    names(5) = "btnTestReports" : caps(5) = "Test Reports"                : targets(5) = "frmTestReports"
+    names(6) = "btnQCReports"   : caps(6) = "QC Reports"                  : targets(6) = "frmQCReports"
 
     Dim i As Integer
 
-    '-- Apply to the main six buttons
+    '-- Apply style and caption to every QC navigation button
     For i = 0 To btnCount - 1
         If ControlExists48(qcFrm, names(i)) Then
             ApplyQCButtonStyle48 qcFrm, names(i), refBtn, caps(i), targets(i)
-        End If
-    Next i
-
-    '-- Apply to the extra button
-    For i = 0 To 0
-        If ControlExists48(qcFrm, extraNames(i)) Then
-            ApplyQCButtonStyle48 qcFrm, extraNames(i), refBtn, extraCaps(i), extraTargets(i)
         End If
     Next i
 
@@ -233,7 +219,7 @@ Private Sub StyleAndLinkQCButtons48()
     DoCmd.Save acForm, QC_MENU_FORM
     DoCmd.Close acForm, QC_MENU_FORM, acSaveYes
 
-    '-- Now inject the click-event Sub bodies into the form's class module
+    '-- Inject the click-event Sub bodies into the form's class module
     InjectQCClickHandlers48
 End Sub
 
@@ -294,9 +280,9 @@ Private Sub InjectQCClickHandlers48()
     Set vbComp  = vbProj.VBComponents(COMPONENT_NAME)
     Set codemod = vbComp.CodeModule
 
-    '-- Handlers to inject  [sub name, target form name]
-    Dim subNames(5)   As String
-    Dim formNames(5)  As String
+    '-- All 7 click-handler Subs to inject  [sub name, target form name]
+    Dim subNames(6)   As String
+    Dim formNames(6)  As String
 
     subNames(0) = "btnQCDashboard_Click" : formNames(0) = "frmQCDashboard"
     subNames(1) = "btnITPRegister_Click" : formNames(1) = "frmITPRegister"
@@ -304,18 +290,11 @@ Private Sub InjectQCClickHandlers48()
     subNames(3) = "btnWIR_Click"         : formNames(3) = "frmWIR"
     subNames(4) = "btnNCR_Click"         : formNames(4) = "frmNCRRegister"
     subNames(5) = "btnTestReports_Click" : formNames(5) = "frmTestReports"
-
-    Dim extraSubNames(0)  As String
-    Dim extraFormNames(0) As String
-    extraSubNames(0)  = "btnQCReports_Click"
-    extraFormNames(0) = "frmQCReports"
+    subNames(6) = "btnQCReports_Click"   : formNames(6) = "frmQCReports"
 
     Dim i As Integer
-    For i = 0 To 5
+    For i = 0 To 6
         InjectOpenFormHandler48 codemod, subNames(i), formNames(i)
-    Next i
-    For i = 0 To 0
-        InjectOpenFormHandler48 codemod, extraSubNames(i), extraFormNames(i)
     Next i
 
     Exit Sub
